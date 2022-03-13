@@ -752,6 +752,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "common"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+]
+
+[[package]]
 name = "concurrent-queue"
 version = "1.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3488,9 +3495,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-marketplace"
+version = "0.1.0"
+dependencies = [
+ "common",
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "pallet-nft",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-nft"
 version = "0.1.0"
 dependencies = [
+ "common",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -4501,6 +4526,7 @@ dependencies = [
  "pallet-aura",
  "pallet-balances",
  "pallet-grandpa",
+ "pallet-marketplace",
  "pallet-nft",
  "pallet-randomness-collective-flip",
  "pallet-sudo",

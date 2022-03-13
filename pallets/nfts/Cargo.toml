@@ -24,6 +24,8 @@ frame-support      = { default-features = false, git = "https://github.com/parit
 frame-system       = { default-features = false, git = "https://github.com/paritytech/substrate.git", tag = "monthly-2021-12" }
 sp-std             = { default-features = false, git = "https://github.com/paritytech/substrate.git", tag = "monthly-2021-12" }
 
+common = { path = "../../common", default-features = false }
+
 
 [dev-dependencies]
 sp-core    = { default-features = false, git = "https://github.com/paritytech/substrate.git", tag = "monthly-2021-12" }
@@ -39,6 +41,7 @@ std = [
 	"frame-system/std",
 	"frame-benchmarking/std",
 	"sp-std/std",
+	"common/std",
 ]
 
 runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks"]

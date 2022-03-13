@@ -1,0 +1,12 @@
+[package]
+edition = "2021"
+license = "Apache 2.0"
+name    = "common"
+version = "0.1.0"
+
+[dependencies]
+frame-support = { default-features = false, git = "https://github.com/paritytech/substrate.git", tag = "monthly-2021-12" }
+
+[features]
+default = ["std"]
+std     = []

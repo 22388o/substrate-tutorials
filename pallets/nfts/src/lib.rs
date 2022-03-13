@@ -9,6 +9,7 @@ pub use pallet::*;
 mod tests;
 pub mod types;
 
+use common::{traits::NFTTrait, types::NFTId};
 use frame_support::ensure;
 use sp_std::vec::Vec;
 use types::*;
@@ -31,7 +32,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn unique_asset)]
 	pub(super) type UniqueAsset<T: Config> =
-		StorageMap<_, Blake2_128Concat, UniqueAssetId, UniqueAssetDetails<T>>;
+		StorageMap<_, Blake2_128Concat, NFTId, UniqueAssetDetails<T>>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn account)]
@@ -39,7 +40,7 @@ pub mod pallet {
 	pub(super) type Account<T: Config> = StorageDoubleMap<
 		_,
 		Blake2_128Concat,
-		UniqueAssetId,
+		NFTId,
 		Blake2_128Concat,
 		T::AccountId,
 		u128,
@@ -49,17 +50,29 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn nonce)]
 	/// Nonce for id of the next created asset
-	pub(super) type Nonce<T: Config> = StorageValue<_, UniqueAssetId, ValueQuery>;
+	pub(super) type Nonce<T: Config> = StorageValue<_, NFTId, ValueQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// New unique asset created
-		Created { creator: T::AccountId, asset_id: UniqueAssetId },
+		Created {
+			creator: T::AccountId,
+			asset_id: NFTId,
+		},
 		/// Some assets have been burned
-		Burned { asset_id: UniqueAssetId, owner: T::AccountId, total_supply: u128 },
+		Burned {
+			asset_id: NFTId,
+			owner: T::AccountId,
+			total_supply: u128,
+		},
 		/// Some assets have been transferred
-		Transferred { asset_id: UniqueAssetId, from: T::AccountId, to: T::AccountId, amount: u128 },
+		Transferred {
+			asset_id: NFTId,
+			from: T::AccountId,
+			to: T::AccountId,
+			amount: u128,
+		},
 	}
 
 	#[pallet::error]
@@ -86,13 +99,16 @@ pub mod pallet {
 			Account::<T>::insert(id, origin.clone(), supply);
 			Nonce::<T>::set(id.saturating_add(1));
 
-			Self::deposit_event(Event::<T>::Created { creator: origin, asset_id: id });
+			Self::deposit_event(Event::<T>::Created {
+				creator: origin,
+				asset_id: id,
+			});
 
 			Ok(())
 		}
 
 		#[pallet::weight(0)]
-		pub fn burn(origin: OriginFor<T>, asset_id: UniqueAssetId, amount: u128) -> DispatchResult {
+		pub fn burn(origin: OriginFor<T>, asset_id: NFTId, amount: u128) -> DispatchResult {
 			let origin = ensure_signed(origin)?;
 
 			ensure!(Self::unique_asset(asset_id).is_some(), Error::<T>::Unknown);
@@ -116,7 +132,11 @@ pub mod pallet {
 				Ok(())
 			})?;
 
-			Self::deposit_event(Event::<T>::Burned { asset_id, owner: origin, total_supply });
+			Self::deposit_event(Event::<T>::Burned {
+				asset_id,
+				owner: origin,
+				total_supply,
+			});
 
 			Ok(())
 		}
@@ -124,32 +144,16 @@ pub mod pallet {
 		#[pallet::weight(0)]
 		pub fn transfer(
 			origin: OriginFor<T>,
-			asset_id: UniqueAssetId,
+			asset_id: NFTId,
 			amount: u128,
 			to: T::AccountId,
 		) -> DispatchResult {
-			let origin = ensure_signed(origin)?;
+			let from = ensure_signed(origin)?;
 
 			ensure!(Self::unique_asset(asset_id).is_some(), Error::<T>::Unknown);
-			Self::ensure_own_some(asset_id, origin.clone())?;
+			Self::ensure_own_some(asset_id, from.clone())?;
 
-			let mut transfered_amount = 0;
-			Account::<T>::mutate(asset_id, origin.clone(), |balance| {
-				let old_balance = *balance;
-				*balance = balance.saturating_sub(amount);
-				transfered_amount = old_balance - *balance;
-			});
-
-			Account::<T>::mutate(asset_id, to.clone(), |balance| {
-				*balance = balance.saturating_add(transfered_amount);
-			});
-
-			Self::deposit_event(Event::<T>::Transferred {
-				asset_id,
-				from: origin,
-				to,
-				amount: transfered_amount,
-			});
+			Self::inner_transfer(asset_id, from, to, amount);
 
 			Ok(())
 		}
@@ -157,11 +161,45 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
-	fn ensure_own_some(asset_id: UniqueAssetId, account: T::AccountId) -> Result<(), Error<T>> {
+	fn ensure_own_some(asset_id: NFTId, account: T::AccountId) -> Result<(), Error<T>> {
 		let owned = Self::account(asset_id, account);
 
 		ensure!(owned > 0, Error::<T>::NotOwned);
 
 		Ok(())
+	}
+
+	fn inner_transfer(nft_id: NFTId, from: T::AccountId, to: T::AccountId, amount: u128) -> u128 {
+		let mut transfered_amount = 0;
+		Account::<T>::mutate(nft_id, from.clone(), |balance| {
+			let old_balance = *balance;
+			*balance = balance.saturating_sub(amount);
+			transfered_amount = old_balance - *balance;
+		});
+
+		Account::<T>::mutate(nft_id, to.clone(), |balance| {
+			*balance = balance.saturating_add(transfered_amount);
+		});
+
+		Self::deposit_event(Event::<T>::Transferred {
+			asset_id: nft_id,
+			from,
+			to,
+			amount: transfered_amount,
+		});
+
+		transfered_amount
+	}
+}
+
+impl<T: Config> NFTTrait for Pallet<T> {
+	type AccountId = T::AccountId;
+
+	fn amount_owned(nft_id: NFTId, account: Self::AccountId) -> u128 {
+		Self::account(nft_id, account)
+	}
+
+	fn transfer(nft_id: NFTId, from: Self::AccountId, to: Self::AccountId, amount: u128) -> u128 {
+		Self::inner_transfer(nft_id, from, to, amount)
 	}
 }

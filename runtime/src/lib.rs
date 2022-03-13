@@ -275,6 +275,12 @@ impl pallet_nft::Config for Runtime {
 	type Event = Event;
 }
 
+impl pallet_marketplace::Config for Runtime {
+	type Event = Event;
+	type Currency = Balances;
+	type NFTs = NFTs;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -292,6 +298,7 @@ construct_runtime!(
 		Sudo: pallet_sudo,
 
 		NFTs: pallet_nft,
+		Marketplace: pallet_marketplace,
 	}
 );
 
