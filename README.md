@@ -18,4 +18,10 @@ They are designed to teach you how to use the multiple featurs of Substrate and 
 
 ## How to contribute
 
-If you want to add new execises, just create two new branches on your fork and some pull request to the original repo
+To add new exercise:
+- checkout the main branch as `solution/<your-exercice-name>`
+- code the tests and the solution
+- checkout your branch as `ex/<you-exercise-name>`
+- remove parts of the code in order to make tests fail
+- edit the README with an introduction and add hints and instructions as comments in you code
+- create two pull requests to this repo
